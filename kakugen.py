@@ -13,6 +13,12 @@ class Kakuro:
             self.set_value(0,i,"B")
             self.set_value(i,0,"B")
 
+    def write(self,filename):
+        with open(filename,'w') as f:
+            for row in self.hgrid:
+                line = ' ,'.join([str(a) for a in row]) + '\n'
+                f.write(line)
+                
     def set_value(self,r,c,val):
         self.grid[r][c] = val
         self.vgrid[r][c] = val
