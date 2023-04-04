@@ -13,11 +13,62 @@ class Kakuro:
             self.set_value(0,i,"B")
             self.set_value(i,0,"B")
 
+
+    def formatline(self, i,row):
+        line = ""
+        for e in row:
+            if e == "B":
+                line = line + e + " "
+            elif str(e).startswith("V") or str(e).startswith("H"):
+                line = line + e[1:] + " "
+            else:
+                line = line + "." + " "
+
+        # last line
+        if i == self.N -1:
+            line = line + "/"
+
+        return line
+    
+
+    # write kakuro grid and solution to file
+    # 2 files are created:
+    #  - filename : the problem
+    #  - sol-filename : the solution
+    #   
     def write(self,filename):
-        with open(filename,'w') as f:
-            for row in self.hgrid:
-                line = ' ,'.join([str(a) for a in row]) + '\n'
-                f.write(line)
+        with open(filename,'w') as fpb:
+            fpb.write("(solve "+ str(self.N)+"\n")
+            with open("sol-"+filename,"w") as fsol:
+                for i,row in enumerate(self.hgrid):
+                    # skip first row that contains only a line of "B"
+                    if i == 0:
+                        continue
+                    line = self.formatline(i,row)
+                    fpb.write(line+"/\n")
+                    line = ' '.join([str(a) for a in row])
+                    if i == self.N -1:
+                        line = line + " //\n"
+                    else:
+                        line = line + " /\n"
+                    fsol.write(line)
+
+                fpb.write("\n")
+                fsol.write("\n")
+                for i,row in enumerate(self.vgrid):
+                    # remove first element that contains a "B"
+                    row = row[1:]
+                    line = self.formatline(i,row)
+                    fpb.write(line+"/\n")
+                    line = ' '.join([str(a) for a in row])
+                    if i == self.N -1:
+                        line = line + " //\n"
+                    else:
+                        line = line + " /\n"
+                    fsol.write(line)
+                fpb.write(")\n\n")
+
+            
                 
     def set_value(self,r,c,val):
         self.grid[r][c] = val
@@ -226,11 +277,12 @@ class Kakuro:
         self.print_one_grid(self.vgrid)
         self.print_one_grid(self.hgrid)
 
-kakuro = Kakuro(14)
+kakuro = Kakuro(8)
 kakuro.fill_grid()
 kakuro.fill_black()
 kakuro.fill_vclue()
 kakuro.fill_hclue()
+
 
 maxattempts = 5
 while maxattempts > 0:
@@ -240,6 +292,7 @@ while maxattempts > 0:
     if hcheck and vcheck:
         break
 
+kakuro.write("test.clp")
 kakuro.print_grids()
 
 print("max attempts " + str(maxattempts))
