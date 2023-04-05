@@ -10,10 +10,12 @@ class Kakuro:
 
         # set top row and left column to black cells
         for i in range(N):
-            self.set_value(0,i,"B")
-            self.set_value(i,0,"B")
+            self.set_value(0,i,"B/B")
+            self.set_value(i,0,"B/B")
 
-
+    def isClue(self,r,c):
+        return not str(self.grid[r][c]).isdigit()
+    
     def formatline(self, i,row):
         line = ""
         for e in row:
@@ -68,12 +70,36 @@ class Kakuro:
                     fsol.write(line)
                 fpb.write(")\n\n")
 
-            
-                
+    def load(self,filename):
+        with open(filename,'r') as fpb:
+            lines = fpb.readlines()
+
     def set_value(self,r,c,val):
-        self.grid[r][c] = val
-        self.vgrid[r][c] = val
-        self.hgrid[r][c] = val
+        
+        if str(val).isdigit() or val == "B/B":
+            self.grid[r][c] = val
+            self.vgrid[r][c] = val
+            self.hgrid[r][c] = val
+
+        else:
+            if val.startswith("V"):
+                self.vgrid[r][c] = val
+                # grid contains Horizontal / Vertical clue
+                if "/" in str(self.grid[r][c]):
+                    clues = self.grid[r][c].split("/")
+                    self.grid[r][c] = clues[0] + "/" + val
+                else:
+                    self.grid[r][c] = "B/" + val
+                
+            if val.startswith("H"):
+                self.hgrid[r][c] = val
+                # grid contains Horizontal / Vertical clue
+                if "/" in str(self.grid[r][c]):
+                    clues = self.grid[r][c].split("/")
+                    self.grid[r][c] = val + "/" + clues[1]
+                else:
+                    self.grid[r][c] = val + "/B"
+
 
     def fill_grid(self):
         # fill in the rest of the grid
@@ -87,50 +113,65 @@ class Kakuro:
         for i in range(1, self.N):
             for j in range(1, self.N):
                 if random.random() < self.blackcells:
-                    self.set_value(i,j,"B")
-                    
-    
-    def fill_vclue(self):
+                    self.set_value(i,j,"B/B")
+
+    # Add clues to the grid
+    #  - V12: Vertical 12 - means a sum of 12 in vertical
+    #  - H13: Horizontal 13 
+    #
+    # returns True if ok
+    # returns False if the clues cannot be filled           
+    def fill_clues(self):
         for c in range(self.N):
             total = 0
-            rindex = -1
             nb_elem = 0
+            # fill vertical clues
             for r in range(self.N):
-                if self.vgrid[r][c] == "B":
-                    if total > 0 and nb_elem > 1:
-                        self.vgrid[rindex][c] = "V" + str(total)
-                    total = 0
-                    rindex = r
-                    nb_elem = 0
-                else:
-                    total = total + self.vgrid[r][c]
-                    nb_elem = nb_elem +1
-            if total > 0 and nb_elem > 1 and rindex < self.N -2:
-                self.vgrid[rindex][c] = "V" + str(total)
+                if self.isClue(r,c):
+                    # next row is a digit
+                    if r < self.N -1 and not self.isClue(r+1,c):
+                        for k in range(r+1,self.N):
+                            if not self.isClue(k,c):
+                                total = total + self.grid[k][c]
+                                nb_elem = nb_elem +1
+                            # either this cell is a clue or the last cell
+                            # set the value of the clue
+                            if self.isClue(k,c) or k == self.N -1:
+                                if nb_elem > 1:
+                                    self.set_value(r,c,"V"+str(total))
+                                total = 0
+                                break
 
-    def fill_hclue(self):
+        # fill horizontal clues
         for r in range(self.N):
             total = 0
-            cindex = -1
             nb_elem = 0
             for c in range(self.N):
-                if self.hgrid[r][c] == "B":
-                    if total > 0 and nb_elem > 1 :
-                        self.hgrid[r][cindex] = "H" + str(total)
-                    total = 0
-                    cindex = c
-                    nb_elem = 0
-                else:
-                    total = total + self.hgrid[r][c]
-                    nb_elem = nb_elem +1
-            if total > 0 and nb_elem > 1  and cindex < self.N -2:
-                self.hgrid[r][cindex] = "H" + str(total)
+                if self.isClue(r,c):
+                    # next row is a digit
+                    if c < self.N -1 and not self.isClue(r,c+1):
+                        for k in range(c+1,self.N):
+                            if not self.isClue(r,k):
+                                total = total + self.grid[r][k]
+                                nb_elem = nb_elem +1
+                            # either this cell is a clue or the last cell
+                            # set the value of the clue
+                            if self.isClue(r,k) or k == self.N -1:
+                                if nb_elem > 1:
+                                    self.set_value(r,c,"H"+str(total))                            
+                                total = 0                                
+                                break
+
+        return True
+
+    
+                
                 
     def vertical_verify(self,rindex,c,nb_elem,vals):
         if len(vals) > 0:
             # only one value, reset to a black cell
             if nb_elem == 1:
-                self.set_value(rindex,c, "B")
+                self.set_value(rindex,c, "B/B")
             # zone is too large
             if nb_elem > 9:
                 return False
@@ -146,7 +187,7 @@ class Kakuro:
                 for i,v in enumerate(list(s)):
                     total = total + v
                     self.set_value(rindex+i+1,c, v)
-                self.vgrid[rindex][c]="V"+str(total)
+                self.set_value(rindex,c,"V" + str(total))
         return True
     
     def horizontal_verify(self,r,cindex,nb_elem,vals):
@@ -169,9 +210,79 @@ class Kakuro:
                 for i,v in enumerate(list(s)):
                     total = total + v
                     self.set_value(r,cindex+i+1, v)
-                self.hgrid[r][cindex]= "H"+str(total)
+                self.set_value(r,cindex,"H" + str(total))
         return True
     
+    def check_isolated(self):
+        for r in range(self.N):
+            for c in range(self.N):
+                # check that this digit is not isolated
+                # it should have a digit next to him 
+                if not self.isClue(r,c):
+                    isolated = True
+                    if r > 0 and not self.isClue(r-1,c):
+                        isolated = False
+                    if r < self.N - 1 and not self.isClue(r+1,c):
+                        isolated = False
+                    if c > 0 and not self.isClue(r,c-1):
+                        isolated = False
+                    if c < self.N - 1 and not self.isClue(r,c+1):
+                        isolated = False
+                    if isolated:
+                        print("Cell isolated " + str(r) + " - " + str(c))
+                        self.set_value(r,c,"B/B")
+
+
+    # TODO : rewrite 
+    # either split verify and correct code , or return code true (nothing changed), and use exception if grid cannot be filled
+    # here after horizontal_verify, the digits are changed and vertical must be checked again !
+    # if verticalverify and horizontal verify are o
+    def check_grid(self):
+        for c in range(self.N):
+            nb_elem = 0
+            vals = set()
+            # fill vertical clues
+            for r in range(self.N):
+                if self.isClue(r,c):
+                    # next row is a digit
+                    if r < self.N -1 and not self.isClue(r+1,c):
+                        for k in range(r+1,self.N):
+                            if not self.isClue(k,c):
+                                nb_elem = nb_elem +1
+                                vals.add(self.grid[k][c])
+                            # either this cell is a clue or the last cell
+                            # set the value of the clue
+                            if self.isClue(k,c) or k == self.N -1:                                
+                                if not self.vertical_verify(r,c,nb_elem,vals):
+                                    return False
+                                total = 0
+                                nb_elem = 0
+                                vals = set()
+                                break
+
+        # fill horizontal clues
+        for r in range(self.N):
+            nb_elem = 0
+            vals = set()
+            for c in range(self.N):
+                if self.isClue(r,c):
+                    # next row is a digit
+                    if c < self.N -1 and not self.isClue(r,c+1):
+                        for k in range(c+1,self.N):
+                            if not self.isClue(r,k):
+                                nb_elem = nb_elem +1
+                                vals.add(self.grid[r][k])
+                            # either this cell is a clue or the last cell
+                            # set the value of the clue
+                            if self.isClue(r,k) or k == self.N -1:
+                                if not self.horizontal_verify(r,c,nb_elem,vals):                                    
+                                    return False                                
+                                nb_elem = 0
+                                vals = set()
+                                break
+
+        return True
+
     def check_vclue(self):
         for c in range(self.N):
             vals = set()
@@ -179,7 +290,7 @@ class Kakuro:
             nb_elem = 0
             vzone = False
             for r in range(self.N):
-                if not vzone and str(self.vgrid[r][c]).startswith("V"):
+                if not vzone and self.isClue(r,c):
                     vzone = True
                     rindex = r
                     vals = set()
@@ -248,42 +359,44 @@ class Kakuro:
 
         return True
 
-    
-
-    def getcluelen(self,index):
-        vals = list()
-        probability = 1
-        # we assign a probability for each possible len
-        # the shorter the len, the higher the probability
-        for v in reversed(range(2, self.N-index)):
-            for _ in range(probability):
-                vals.append(v)
-            probability = probability+1
-
-        print(vals)
-        return random.choice(vals)
-
                         
     def print_one_grid(self,g):
         for r in range(self.N):
             row = ""
             for c in range(self.N):
-                row = row + "{:>4}".format(g[r][c])
+                row = row + "{:>8}".format(g[r][c])
             print(row)     
         print("\n\n")
 
     def print_grids(self):
         self.print_one_grid(self.grid)
-        self.print_one_grid(self.vgrid)
-        self.print_one_grid(self.hgrid)
+        #self.print_one_grid(self.vgrid)
+        #self.print_one_grid(self.hgrid)
 
-kakuro = Kakuro(8)
+kakuro = Kakuro(10)
+print(" -- 1")
 kakuro.fill_grid()
+kakuro.print_grids()
+
+print(" -- 2")
 kakuro.fill_black()
-kakuro.fill_vclue()
-kakuro.fill_hclue()
+kakuro.print_grids()
+
+print(" -- 3 " )
+kakuro.check_grid()
+kakuro.print_grids()
+
+isOK = kakuro.check_grid()
+print(" -- 4 " , isOK)
+kakuro.print_grids()
+
+print(" -- 5 " )
+kakuro.fill_clues()
+kakuro.print_grids()
 
 
+
+exit()
 maxattempts = 5
 while maxattempts > 0:
     maxattempts = maxattempts-1
