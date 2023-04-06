@@ -24,20 +24,15 @@ class Kakuro:
     def isClue(self,r,c):
         return not str(self.grid[r][c]).isdigit()
     
-    def formatline(self, i,row):
+    def formatline(self,row):
         line = ""
         for e in row:
-            if e == "B":
-                line = line + e + " "
+            if e == "B/B":
+                line = line + "B" + " "
             elif str(e).startswith("V") or str(e).startswith("H"):
                 line = line + e[1:] + " "
             else:
                 line = line + "." + " "
-
-        # last line
-        if i == self.N -1:
-            line = line + "/"
-
         return line
     
 
@@ -49,34 +44,39 @@ class Kakuro:
     def write(self,filename):
         with open(filename,'w') as fpb:
             fpb.write("(solve "+ str(self.N)+"\n")
-            with open("sol-"+filename,"w") as fsol:
-                for i,row in enumerate(self.hgrid):
-                    # skip first row that contains only a line of "B"
-                    if i == 0:
-                        continue
-                    line = self.formatline(i,row)
-                    fpb.write(line+"/\n")
-                    line = ' '.join([str(a) for a in row])
-                    if i == self.N -1:
-                        line = line + " //\n"
-                    else:
-                        line = line + " /\n"
-                    fsol.write(line)
+            
+            for i,row in enumerate(self.hgrid):
+                # skip first row that contains only a line of "B"
+                if i == 0:
+                    continue
+                line = self.formatline(row)
+                # last line
+                if i == self.N-1:
+                    line = line +"/"
+                fpb.write(line+"/\n")
+            fpb.write("\n")
+            for c in range(1,self.N):
+                row = list()
+                for r in range(self.N):
+                    row.append(self.vgrid[r][c])
+            
+                # remove first element that contains a "B"
+                #row = row[1:]
+                line = self.formatline(row)
+                #last line
+                if c == self.N -1:
+                    line = line +"/"
+                fpb.write(line+"/\n")
 
-                fpb.write("\n")
-                fsol.write("\n")
-                for i,row in enumerate(self.vgrid):
-                    # remove first element that contains a "B"
-                    row = row[1:]
-                    line = self.formatline(i,row)
-                    fpb.write(line+"/\n")
-                    line = ' '.join([str(a) for a in row])
-                    if i == self.N -1:
-                        line = line + " //\n"
-                    else:
-                        line = line + " /\n"
-                    fsol.write(line)
-                fpb.write(")\n\n")
+            fpb.write(")\n\n")
+            
+        with open("sol-"+filename,"w") as fsol:
+            for r in range(self.N):
+                row = ""
+                for c in range(self.N):
+                    row = row + "{:>8}".format(self.grid[r][c])
+                fsol.write(row+"\n")     
+            fsol.write("\n\n")
 
     def load(self,filename):
         with open(filename,'r') as fpb:
@@ -346,7 +346,7 @@ class Kakuro:
         #self.print_one_grid(self.vgrid)
         #self.print_one_grid(self.hgrid)
 
-kakuro = Kakuro(10)
+kakuro = Kakuro(12)
 print(" -- 1")
 kakuro.fill_grid()
 kakuro.print_grids()
@@ -370,21 +370,5 @@ kakuro.fill_clues()
 kakuro.print_grids()
 
 
-
-exit()
-maxattempts = 5
-while maxattempts > 0:
-    maxattempts = maxattempts-1
-    vcheck = kakuro.check_vclue()
-    hcheck = kakuro.check_hclue()
-    if hcheck and vcheck:
-        break
-
 kakuro.write("test.clp")
-kakuro.print_grids()
 
-print("max attempts " + str(maxattempts))
-if vcheck and hcheck:
-    print("\nGrid OK ++++\n")
-else:
-    print("\nGrid KO ----\n")
