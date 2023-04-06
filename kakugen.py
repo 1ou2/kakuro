@@ -2,8 +2,13 @@ import random
 
 class Kakuro:
     def __init__(self, N):
+        # size of the grid
         self.N = N
-        self.blackcells = 0.35
+        # % of blacks cells (full black or with clues) in the grid
+        self.blackcells = 0.3
+        # when trying to fill the grid number of attempts to try
+        self.maxattempts = 5
+
         self.grid = [[None for _ in range(N)] for _ in range(N)]
         self.vgrid = [[None for _ in range(N)] for _ in range(N)]
         self.hgrid = [[None for _ in range(N)] for _ in range(N)]
@@ -165,7 +170,40 @@ class Kakuro:
         return True
 
     
-                
+    def check_zone(self,vals,nb_elem):
+        if nb_elem == 1:
+            return False
+        
+        if nb_elem > 9:
+            raise Exception("Too many values, a zone cannot contain more than 9 cells")
+        
+        if nb_elem != len(vals):
+            return False
+
+        return True
+
+    # change the digits in a zone so that it respects a zone constraints
+    # all digits in a zone must be different
+    def change_zone(self,nb_elem,r,c,isVertical=False,isHorizontal=False):
+        assert(isVertical != isHorizontal)
+        assert(nb_elem <= 9)    
+
+        # generate new distincts elements
+        s = set()
+        total = 0
+        while len(s) < nb_elem:
+            s.add(random.randint(1,9))
+        
+        for i,v in enumerate(list(s)):
+            total = total + v
+            if isVertical:
+                self.set_value(r+i+1,c, v)
+            if isHorizontal:
+                self.set_value(r,c+i+1, v)
+        #if isVertical:
+        #    self.set_value(r,c,"V" + str(total))
+        #if isHorizontal:
+        #    self.set_value(r,c,"H" + str(total))
                 
     def vertical_verify(self,rindex,c,nb_elem,vals):
         if len(vals) > 0:
@@ -213,7 +251,7 @@ class Kakuro:
                 self.set_value(r,cindex,"H" + str(total))
         return True
     
-    def check_isolated(self):
+    def change_isolated(self):
         for r in range(self.N):
             for c in range(self.N):
                 # check that this digit is not isolated
@@ -238,6 +276,65 @@ class Kakuro:
     # here after horizontal_verify, the digits are changed and vertical must be checked again !
     # if verticalverify and horizontal verify are o
     def check_grid(self):
+        maxattempts = self.maxattempts
+        nochange = False
+        while maxattempts >0:
+            maxattempts = maxattempts - 1
+            if nochange == True:
+                break
+
+            nochange = True
+            # vertical clues
+            for c in range(self.N):
+                nb_elem = 0
+                vals = set()
+                for r in range(self.N):
+                    if self.isClue(r,c):
+                        # next row is a digit
+                        if r < self.N -1 and not self.isClue(r+1,c):
+                            for k in range(r+1,self.N):
+                                if not self.isClue(k,c):
+                                    nb_elem = nb_elem +1
+                                    vals.add(self.grid[k][c])
+                                # either this cell is a clue or the last cell
+                                # set the value of the clue
+                                if self.isClue(k,c) or k == self.N -1:     
+                                    if not self.check_zone(vals,nb_elem):
+                                        self.change_zone(nb_elem,r,c,isVertical=True)
+                                        nochange = False
+                                    nb_elem = 0
+                                    vals = set()
+                                    break
+
+            # fill horizontal clues
+            for r in range(self.N):
+                nb_elem = 0
+                vals = set()
+                for c in range(self.N):
+                    if self.isClue(r,c):
+                        # next row is a digit
+                        if c < self.N -1 and not self.isClue(r,c+1):
+                            for k in range(c+1,self.N):
+                                if not self.isClue(r,k):
+                                    nb_elem = nb_elem +1
+                                    vals.add(self.grid[r][k])
+                                # either this cell is a clue or the last cell
+                                # set the value of the clue
+                                if self.isClue(r,k) or k == self.N -1:
+                                    if not self.check_zone(vals,nb_elem):
+                                        self.change_zone(nb_elem,r,c,isHorizontal=True)
+                                        nochange = False                          
+                                    nb_elem = 0
+                                    vals = set()
+                                    break
+
+        return nochange
+
+    # TODO : rewrite 
+    # either split verify and correct code , or return code true (nothing changed), and use exception if grid cannot be filled
+    # here after horizontal_verify, the digits are changed and vertical must be checked again !
+    # if verticalverify and horizontal verify are o
+    def check_grid_old(self):
         for c in range(self.N):
             nb_elem = 0
             vals = set()
@@ -382,12 +479,14 @@ print(" -- 2")
 kakuro.fill_black()
 kakuro.print_grids()
 
-print(" -- 3 " )
-kakuro.check_grid()
+print(" -- 3")
+kakuro.change_isolated()
 kakuro.print_grids()
 
+
+print(" -- 4 " )
 isOK = kakuro.check_grid()
-print(" -- 4 " , isOK)
+print(" isOK : " , isOK)
 kakuro.print_grids()
 
 print(" -- 5 " )
