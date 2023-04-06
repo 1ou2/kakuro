@@ -18,6 +18,9 @@ class Kakuro:
             self.set_value(0,i,"B/B")
             self.set_value(i,0,"B/B")
 
+    def get_value(self,r,c):
+        return self.grid[r][c]
+    
     def isClue(self,r,c):
         return not str(self.grid[r][c]).isdigit()
     
@@ -187,69 +190,65 @@ class Kakuro:
     def change_zone(self,nb_elem,r,c,isVertical=False,isHorizontal=False):
         assert(isVertical != isHorizontal)
         assert(nb_elem <= 9)    
-
-        # generate new distincts elements
-        s = set()
-        total = 0
-        while len(s) < nb_elem:
-            s.add(random.randint(1,9))
         
-        for i,v in enumerate(list(s)):
-            total = total + v
+        # one element, nothing to change, it is not a zone
+        if nb_elem == 1:
+            return True
+        
+        # values used in this zone
+        zvals = set()
+        for i in range(nb_elem):
+            # vertical zone starting at cell (r,c) -> (r+1,c) (r+2,c) .... 
             if isVertical:
-                self.set_value(r+i+1,c, v)
+                hvals = set()
+                # what are the elements at left of (r+i,c) -> (r+i,c-1), (r+i,c-2), ...
+                if c > 1:
+                    for k in range(c):
+                        cleft = c -k-1
+                        if not self.isClue(r+i+1,cleft):
+                            hvals.add(self.get_value(r+i+1,cleft))
+                        else:
+                            break
+                if c < self.N -1:
+                    for cright in range(c+1,self.N):
+                        if not self.isClue(r+i+1,cright):
+                            hvals.add(self.get_value(r+i+1,cright))
+                        else:
+                            break
+                possiblevals = set([1,2,3,4,5,6,7,8,9]) - hvals -zvals
+                if len(possiblevals) == 0:
+                    return False
+                else:
+                    val = random.choice(list(possiblevals))
+                    zvals.add(val)
+                    self.set_value(r+i+1,c,val)
             if isHorizontal:
-                self.set_value(r,c+i+1, v)
-        #if isVertical:
-        #    self.set_value(r,c,"V" + str(total))
-        #if isHorizontal:
-        #    self.set_value(r,c,"H" + str(total))
-                
-    def vertical_verify(self,rindex,c,nb_elem,vals):
-        if len(vals) > 0:
-            # only one value, reset to a black cell
-            if nb_elem == 1:
-                self.set_value(rindex,c, "B/B")
-            # zone is too large
-            if nb_elem > 9:
-                return False
-            # we have a digit repeated in this zone
-            # it is forbidden by the rules
-            if nb_elem != len(vals):
-                # generate new distincts elements
-                s = set()
-                total = 0
-                while len(s) < nb_elem:
-                    s.add(random.randint(1,9))
-                
-                for i,v in enumerate(list(s)):
-                    total = total + v
-                    self.set_value(rindex+i+1,c, v)
-                self.set_value(rindex,c,"V" + str(total))
+                vvals = set()
+                # what are the elements at the top of (r,c+1) -> (r-1,c+i), (r-2,c+i), ...
+                if r > 1:
+                    for k in range(r):
+                        rtop = r -k-1
+                        if not self.isClue(rtop,c+i+1):
+                            vvals.add(self.get_value(rtop,c+i+1))
+                        else:
+                            break
+                if r < self.N -1:
+                    for rbottom in range(r+1,self.N):
+                        if not self.isClue(rbottom,c+i+1):
+                            vvals.add(self.get_value(rbottom,c+i+1))
+                        else:
+                            break
+                possiblevals = set([1,2,3,4,5,6,7,8,9]) - vvals -zvals
+                if len(possiblevals) == 0:
+                    return False
+                else:
+                    val = random.choice(list(possiblevals))
+                    zvals.add(val)
+                    self.set_value(r,c+i+1,val)
+                        
         return True
+                
     
-    def horizontal_verify(self,r,cindex,nb_elem,vals):
-        if len(vals) > 0:
-            # only one value, reset to a black cell
-            if nb_elem == 1:
-                self.set_value(r,cindex, "B")
-            # zone is too large
-            if nb_elem > 9:
-                return False
-            # we have a digit repeated in this zone
-            # it is forbidden by the rules
-            if nb_elem != len(vals):
-                # generate new distincts elements
-                s = set()
-                total = 0
-                while len(s) < nb_elem:
-                    s.add(random.randint(1,9))
-                
-                for i,v in enumerate(list(s)):
-                    total = total + v
-                    self.set_value(r,cindex+i+1, v)
-                self.set_value(r,cindex,"H" + str(total))
-        return True
     
     def change_isolated(self):
         for r in range(self.N):
@@ -330,131 +329,8 @@ class Kakuro:
 
         return nochange
 
-    # TODO : rewrite 
-    # either split verify and correct code , or return code true (nothing changed), and use exception if grid cannot be filled
-    # here after horizontal_verify, the digits are changed and vertical must be checked again !
-    # if verticalverify and horizontal verify are o
-    def check_grid_old(self):
-        for c in range(self.N):
-            nb_elem = 0
-            vals = set()
-            # fill vertical clues
-            for r in range(self.N):
-                if self.isClue(r,c):
-                    # next row is a digit
-                    if r < self.N -1 and not self.isClue(r+1,c):
-                        for k in range(r+1,self.N):
-                            if not self.isClue(k,c):
-                                nb_elem = nb_elem +1
-                                vals.add(self.grid[k][c])
-                            # either this cell is a clue or the last cell
-                            # set the value of the clue
-                            if self.isClue(k,c) or k == self.N -1:                                
-                                if not self.vertical_verify(r,c,nb_elem,vals):
-                                    return False
-                                total = 0
-                                nb_elem = 0
-                                vals = set()
-                                break
+    
 
-        # fill horizontal clues
-        for r in range(self.N):
-            nb_elem = 0
-            vals = set()
-            for c in range(self.N):
-                if self.isClue(r,c):
-                    # next row is a digit
-                    if c < self.N -1 and not self.isClue(r,c+1):
-                        for k in range(c+1,self.N):
-                            if not self.isClue(r,k):
-                                nb_elem = nb_elem +1
-                                vals.add(self.grid[r][k])
-                            # either this cell is a clue or the last cell
-                            # set the value of the clue
-                            if self.isClue(r,k) or k == self.N -1:
-                                if not self.horizontal_verify(r,c,nb_elem,vals):                                    
-                                    return False                                
-                                nb_elem = 0
-                                vals = set()
-                                break
-
-        return True
-
-    def check_vclue(self):
-        for c in range(self.N):
-            vals = set()
-            rindex = 0
-            nb_elem = 0
-            vzone = False
-            for r in range(self.N):
-                if not vzone and self.isClue(r,c):
-                    vzone = True
-                    rindex = r
-                    vals = set()
-                    nb_elem = 0
-                if vzone:
-
-                    if str(self.vgrid[r][c]).startswith("B"):
-                        if not self.vertical_verify(rindex,c,nb_elem,vals):
-                            return False
-                        vzone = False
-                        rindex = 0
-                        vals = set()
-                        nb_elem = 0
-                        
-                    elif str(self.vgrid[r][c]).startswith("V"):
-                        if not self.vertical_verify(rindex,c,nb_elem,vals):
-                            return False
-                        vzone = True
-                        rindex = r
-                        vals = set()
-                        nb_elem = 0
-                    else:
-                        vals.add(self.vgrid[r][c])
-                        nb_elem = nb_elem + 1
-            
-            if not self.vertical_verify(rindex,c,nb_elem,vals):
-                return False
-
-        return True
-
-    def check_hclue(self):
-        for r in range(self.N):
-            vals = set()
-            cindex = 0
-            nb_elem = 0
-            hzone = False
-            for c in range(self.N):
-                if not hzone and str(self.hgrid[r][c]).startswith("H"):
-                    hzone = True
-                    cindex = c
-                    vals = set()
-                    nb_elem = 0
-                if hzone:
-
-                    if str(self.hgrid[r][c]).startswith("B"):
-                        if not self.horizontal_verify(r,cindex,nb_elem,vals):
-                            return False
-                        hzone = False
-                        cindex = 0
-                        vals = set()
-                        nb_elem = 0
-                        
-                    elif str(self.hgrid[r][c]).startswith("H"):
-                        if not self.horizontal_verify(r,cindex,nb_elem,vals):
-                            return False
-                        hzone = True
-                        cindex = c
-                        vals = set()
-                        nb_elem = 0
-                    else:
-                        vals.add(self.hgrid[r][c])
-                        nb_elem = nb_elem + 1
-            
-            if not self.horizontal_verify(r,cindex,nb_elem,vals):
-                return False
-
-        return True
 
                         
     def print_one_grid(self,g):
