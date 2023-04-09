@@ -244,7 +244,7 @@ class KakuroGrid:
     
     def check_zone(self,vals,nb_elem):
         if nb_elem == 1:
-            return False
+            return True
         
         if nb_elem > 9:
             raise Exception("Too many values, a zone cannot contain more than 9 cells")
@@ -426,29 +426,29 @@ class KakuroGrid:
             return False
 
 if __name__ == '__main__':
-    kakuro = KakuroGrid(12)
+    kakuro = KakuroGrid(10)
     print(" -- 1")
     kakuro.fill_grid()
-    kakuro.print_grids()
+    #kakuro.print_grids()
 
-    print(" -- 2")
+    #print(" -- 2")
     kakuro.fill_black()
-    kakuro.print_grids()
+    #kakuro.print_grids()
 
     print(" -- 3")
     kakuro.change_isolated()
-    kakuro.print_grids()
+    #kakuro.print_grids()
 
 
     print(" -- 4 " )
     isOK = kakuro.check_grid()
     print(" isOK : " , isOK)
-    kakuro.print_grids()
+    #kakuro.print_grids()
 
     print(" -- 5 " )
     kakuro.fill_clues()
     kakuro.print_grids()
 
 
-    kakuro.write("test.clp")
+    #kakuro.write("test.clp")
 

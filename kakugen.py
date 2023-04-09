@@ -28,7 +28,7 @@ if __name__ == '__main__':
     filegrid = FileGrid()
     k = 0
     for i in range(grids):
-        kakuro = KakuroGrid(size,maxattempts=10,bcells=0.25)
+        kakuro = KakuroGrid(size,maxattempts=10,bcells=0.4)
         
         if kakuro.fill():
             print("grid created")

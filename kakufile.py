@@ -58,10 +58,11 @@ class FileGrid():
         items = os.listdir(self.griddir)
         items.sort(reverse=True)
         if items:
-            # end contains gid + extension (either .sol or .txt)
-            endlen = self.GID_SIZE+len(self.gridext)
-            end = items[0][:endlen]
-            lastgid = int(end[self.GID_SIZE:])
+            # end contains gid + extension (either .sol or .clp)
+            #endlen = self.GID_SIZE+len(self.gridext)
+            gidstart = len(self.prefix)
+            gid = items[0][gidstart:gidstart+self.GID_SIZE]
+            lastgid = int(gid)
         else:
             lastgid = 0
         gid = str(lastgid +1)
