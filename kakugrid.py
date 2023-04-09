@@ -1,22 +1,27 @@
+from curses.ascii import isdigit
 import random
 
-class Kakuro:
-    def __init__(self, N,bcells=0.3,maxattempts=5):
-        # size of the grid
-        self.N = N
-        # % of blacks cells (full black or with clues) in the grid
-        self.blackcells = bcells
-        # when trying to fill the grid number of attempts to try
-        self.maxattempts = maxattempts
+class KakuroGrid:
+    def __init__(self, size=10,fpath=None,bcells=0.3,maxattempts=5):
 
-        self.grid = [[None for _ in range(N)] for _ in range(N)]
-        self.vgrid = [[None for _ in range(N)] for _ in range(N)]
-        self.hgrid = [[None for _ in range(N)] for _ in range(N)]
+        if fpath is not None:
+            self.load(fpath)
+        else:
+            # size of the grid
+            self.N = size
+            # % of blacks cells (full black or with clues) in the grid
+            self.blackcells = bcells
+            # when trying to fill the grid number of attempts to try
+            self.maxattempts = maxattempts
 
-        # set top row and left column to black cells
-        for i in range(N):
-            self.set_value(0,i,"B/B")
-            self.set_value(i,0,"B/B")
+            self.grid = [[None for _ in range(self.N)] for _ in range(self.N)]
+            self.vgrid = [[None for _ in range(self.N)] for _ in range(self.N)]
+            self.hgrid = [[None for _ in range(self.N)] for _ in range(self.N)]
+
+            # set top row and left column to black cells
+            for i in range(self.N):
+                self.set_value(0,i,"B/B")
+                self.set_value(i,0,"B/B")
 
     def get_value(self,r,c):
         return self.grid[r][c]
@@ -35,6 +40,45 @@ class Kakuro:
                 line = line + "." + " "
         return line
     
+    # returns a string containing the kakuro problem
+    def serialize_problem(self):
+        pb = "(solve "+ str(self.N)+"\n"
+        
+        for i,row in enumerate(self.hgrid):
+            # skip first row that contains only a line of "B"
+            if i == 0:
+                continue
+            line = self.formatline(row)
+            # last line
+            if i == self.N-1:
+                line = line +"/"
+            pb = pb + line+"/\n"
+            pb = pb + "\n"
+        for c in range(1,self.N):
+            row = list()
+            for r in range(self.N):
+                row.append(self.vgrid[r][c])
+        
+            # remove first element that contains a "B"
+            #row = row[1:]
+            line = self.formatline(row)
+            #last line
+            if c == self.N -1:
+                line = line +"/"
+            pb = pb + line+"/\n"
+
+        pb = pb + ")\n\n"
+        return pb       
+
+    def serialize_solution(self):
+        sol = ""
+        for r in range(self.N):
+            row = ""
+            for c in range(self.N):
+                row = row + "{:>8}".format(self.grid[r][c])
+            sol = sol + row + "\n"     
+        sol = sol + "\n\n"
+        return sol
 
     # write kakuro grid and solution to file
     # 2 files are created:
@@ -81,6 +125,31 @@ class Kakuro:
     def load(self,filename):
         with open(filename,'r') as fpb:
             lines = fpb.readlines()
+            # first line is "(solve XXX" where XXX is the size of the grid
+            size = lines[0].split()[1]
+            self.N = int(size)
+            isHorizontal = True
+            r = 0
+            c = 0
+            for line in lines[1:]:
+                # end of the grid
+                if line.strip() == ")":
+                    break
+                if line.strip().endswith("/"):
+                    l1 = line.replace("/","")
+                    l2 = l1.replace(".","B/B")
+                    vals = l2.split()
+                    for c, v in enumerate(vals):
+                        if isdigit(v):
+                            v = int(v)
+                        self.grid[r][c] = v
+                    r = r+1
+                # first section is the horizontal zone
+                # this zone ends with a double slash
+                # from there we will be parsing the vertical zone
+                if line.strip().endswith("//"):
+                    isHorizontal = False
+
 
     def set_value(self,r,c,val):
         
@@ -266,7 +335,7 @@ class Kakuro:
                     if c < self.N - 1 and not self.isClue(r,c+1):
                         isolated = False
                     if isolated:
-                        print("Cell isolated " + str(r) + " - " + str(c))
+                        #print("Cell isolated " + str(r) + " - " + str(c))
                         self.set_value(r,c,"B/B")
 
 
@@ -346,29 +415,40 @@ class Kakuro:
         #self.print_one_grid(self.vgrid)
         #self.print_one_grid(self.hgrid)
 
-kakuro = Kakuro(12)
-print(" -- 1")
-kakuro.fill_grid()
-kakuro.print_grids()
+    def fill(self):
+        self.fill_grid()
+        self.fill_black()
+        self.change_isolated()
+        if self.check_grid():
+            self.fill_clues()
+            return True
+        else:
+            return False
 
-print(" -- 2")
-kakuro.fill_black()
-kakuro.print_grids()
+if __name__ == '__main__':
+    kakuro = KakuroGrid(12)
+    print(" -- 1")
+    kakuro.fill_grid()
+    kakuro.print_grids()
 
-print(" -- 3")
-kakuro.change_isolated()
-kakuro.print_grids()
+    print(" -- 2")
+    kakuro.fill_black()
+    kakuro.print_grids()
 
-
-print(" -- 4 " )
-isOK = kakuro.check_grid()
-print(" isOK : " , isOK)
-kakuro.print_grids()
-
-print(" -- 5 " )
-kakuro.fill_clues()
-kakuro.print_grids()
+    print(" -- 3")
+    kakuro.change_isolated()
+    kakuro.print_grids()
 
 
-kakuro.write("test.clp")
+    print(" -- 4 " )
+    isOK = kakuro.check_grid()
+    print(" isOK : " , isOK)
+    kakuro.print_grids()
+
+    print(" -- 5 " )
+    kakuro.fill_clues()
+    kakuro.print_grids()
+
+
+    kakuro.write("test.clp")
 
