@@ -25,17 +25,32 @@ if __name__ == '__main__':
     grids = args.grids
 
     gengrids = list()
-    filegrid = FileGrid()
+    filegrid = FileGrid(griddir=dir)
     k = 0
-    for i in range(grids):
+    config = list()
+    with open("kakuro-config.clp","r") as f:
+        config = f.readlines()
+
+    while k < grids:
         kakuro = KakuroGrid(size,maxattempts=10,bcells=0.4)
         
         if kakuro.fill():
-            print("grid created")
-            filegrid.createNewFile()
+            gridpath = filegrid.createNewFile()
+            config.append(f"(batch {gridpath})\n")
             problem = kakuro.serialize_problem()
             solution = kakuro.serialize_solution()
             filegrid.write(problem)
             filegrid.writeSolution(solution)
+            print("grid created " + gridpath)
+            k = k +1
         else:
             print("KO")
+
+    config.append("\n(exit)\n")
+    clpfile = dir + ".clp"
+    
+    with open(clpfile,"w") as f:
+        f.writelines(config)
+
+
+    

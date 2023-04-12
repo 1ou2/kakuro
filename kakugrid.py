@@ -366,10 +366,13 @@ class KakuroGrid:
                                     vals.add(self.grid[k][c])
                                 # either this cell is a clue or the last cell
                                 # set the value of the clue
-                                if self.isClue(k,c) or k == self.N -1:     
-                                    if not self.check_zone(vals,nb_elem):
-                                        self.change_zone(nb_elem,r,c,isVertical=True)
-                                        nochange = False
+                                if self.isClue(k,c) or k == self.N -1:
+                                    try:
+                                        if not self.check_zone(vals,nb_elem):
+                                            self.change_zone(nb_elem,r,c,isVertical=True)
+                                            nochange = False
+                                    except Exception:
+                                        return False
                                     nb_elem = 0
                                     vals = set()
                                     break
@@ -389,9 +392,12 @@ class KakuroGrid:
                                 # either this cell is a clue or the last cell
                                 # set the value of the clue
                                 if self.isClue(r,k) or k == self.N -1:
-                                    if not self.check_zone(vals,nb_elem):
-                                        self.change_zone(nb_elem,r,c,isHorizontal=True)
-                                        nochange = False                          
+                                    try:
+                                        if not self.check_zone(vals,nb_elem):
+                                            self.change_zone(nb_elem,r,c,isHorizontal=True)
+                                            nochange = False
+                                    except Exception:
+                                        return False                          
                                     nb_elem = 0
                                     vals = set()
                                     break
